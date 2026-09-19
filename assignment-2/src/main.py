@@ -18,7 +18,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Locates the project root directory (one level up from src/)
+# Locates the project root directory (one level up from src/) 
 project_root = Path(__file__).resolve().parent.parent
 env_path = project_root / ".env"
 

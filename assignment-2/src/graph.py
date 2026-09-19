@@ -2,7 +2,7 @@
 LangGraph two-node chain: Agent A (worker) -> Agent B (reviewer) -> END.
 
 No revision loop by design (per assignment spec): B reviews once and the
-chain ends with either an "approved" or "rejected" verdict.
+chain ends with either an "approved" or "rejected" verdict. 
 """
 
 from __future__ import annotations

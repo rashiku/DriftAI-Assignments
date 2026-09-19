@@ -1,6 +1,6 @@
 # Transcript — Agent A/B run (normal prompt, expect approval)
 
-Generated: 2026-09-19T02:41:15.307530+00:00
+Generated: 2026-09-19T03:05:15.613367+00:00
 
 ## 1. Task prompt given to Agent A
 ```
@@ -35,61 +35,57 @@ Rules:
 import re
 
 def parse_duration(s: str) -> int:
-    """
-    Parse a human‑readable duration string and return the total number of seconds.
+    """Parse a human‑readable duration string and return the total seconds.
+
+    The string may contain hours (``h``), minutes (``m``) and seconds (``s``)
+    components.  Components must appear in the order hours → minutes → seconds;
+    whitespace between components is ignored.  Each component consists of a
+    non‑negative integer followed directly by its unit suffix.
 
     Parameters
     ----------
-    s : str
-        Duration string consisting of integer values followed by unit suffixes:
-        'h' for hours, 'm' for minutes, and 's' for seconds. Units may appear
-        in any subset but must follow the order: hours → minutes → seconds.
-        Whitespace between components is optional.
+    s: str
+        The duration string to parse.
 
     Returns
     -------
     int
-        Total duration expressed in seconds.
+        Total number of seconds represented by ``s``.
 
     Raises
     ------
     ValueError
-        If the string is empty, contains unknown units, has malformed or
-        negative numbers, repeats a unit, or violates the required unit order.
+        If ``s`` is empty, contains an unknown unit, a malformed number,
+        a negative number, duplicate units, or components out of the required
+        order.
     """
     if not s or s.strip() == "":
-        raise ValueError("Empty duration string")
+        raise ValueError("empty duration string")
 
-    pattern = re.compile(r'\s*(\d+)([hms])')
+    pattern = re.compile(r"\s*(\d+)([hms])")
     pos = 0
     total_seconds = 0
     last_order = -1
     seen_units = set()
-    unit_order = {"h": 0, "m": 1, "s": 2}
-    while pos < len(s):
-        match = pattern.match(s, pos)
-        if not match:
-            raise ValueError(f"Invalid format at position {pos}: '{s[pos:]}'")
-        number_str, unit = match.group(1), match.group(2)
+    order_map = {"h": 0, "m": 1, "s": 2}
 
-        # Convert and validate the numeric part
-        try:
-            value = int(number_str)
-        except Exception:
-            raise ValueError(f"Malformed number '{number_str}'")
-        if value < 0:
-            raise ValueError("Negative numbers are not allowed")
+    for match in pattern.finditer(s):
+        start, end = match.span()
+        if start != pos:
+            raise ValueError(f"invalid format at position {pos}")
 
-        # Enforce ordering and uniqueness of units
-        order = unit_order[unit]
-        if order <= last_order:
-            raise ValueError("Units out of order")
+        value = int(match.group(1))
+        unit = match.group(2)
+
         if unit in seen_units:
-            raise ValueError(f"Duplicate unit '{unit}'")
+            raise ValueError(f"duplicate unit '{unit}'")
         seen_units.add(unit)
+
+        order = order_map[unit]
+        if order <= last_order:
+            raise ValueError("units out of order")
         last_order = order
 
-        # Accumulate seconds
         if unit == "h":
             total_seconds += value * 3600
         elif unit == "m":
@@ -97,11 +93,10 @@ def parse_duration(s: str) -> int:
         else:  # unit == "s"
             total_seconds += value
 
-        pos = match.end()
+        pos = end
 
-    # Any trailing non‑whitespace characters are invalid
-    if s[pos:].strip():
-        raise ValueError("Unexpected trailing characters")
+    if pos != len(s):
+        raise ValueError("invalid trailing characters")
 
     return total_seconds
 ```
@@ -124,14 +119,14 @@ Per-case results:
   [PASS] input='2h0m0s' expected=7200 outcome=returned value/message=7200
   [PASS] input='0s' expected=0 outcome=returned value/message=0
   [PASS] input='1h 30m' expected=5400 outcome=returned value/message=5400
-  [PASS] input='' expected='ValueError' outcome=ValueError value/message='Empty duration string'
-  [PASS] input='30m1h' expected='ValueError' outcome=ValueError value/message='Units out of order'
-  [PASS] input='1x' expected='ValueError' outcome=ValueError value/message="Invalid format at position 0: '1x'"
-  [PASS] input='h' expected='ValueError' outcome=ValueError value/message="Invalid format at position 0: 'h'"
-  [PASS] input='-5m' expected='ValueError' outcome=ValueError value/message="Invalid format at position 0: '-5m'"
-  [PASS] input='1h1h' expected='ValueError' outcome=ValueError value/message='Units out of order'
-  [PASS] input='1.5h' expected='ValueError' outcome=ValueError value/message="Invalid format at position 0: '1.5h'"
-  [PASS] input='abc' expected='ValueError' outcome=ValueError value/message="Invalid format at position 0: 'abc'"
+  [PASS] input='' expected='ValueError' outcome=ValueError value/message='empty duration string'
+  [PASS] input='30m1h' expected='ValueError' outcome=ValueError value/message='units out of order'
+  [PASS] input='1x' expected='ValueError' outcome=ValueError value/message='invalid trailing characters'
+  [PASS] input='h' expected='ValueError' outcome=ValueError value/message='invalid trailing characters'
+  [PASS] input='-5m' expected='ValueError' outcome=ValueError value/message='invalid format at position 0'
+  [PASS] input='1h1h' expected='ValueError' outcome=ValueError value/message="duplicate unit 'h'"
+  [PASS] input='1.5h' expected='ValueError' outcome=ValueError value/message='invalid format at position 0'
+  [PASS] input='abc' expected='ValueError' outcome=ValueError value/message='invalid trailing characters'
 ```
 
 ## 4. Agent B's structured verdict
@@ -139,19 +134,19 @@ Per-case results:
 
 | Criterion | Passed | Detail |
 |---|---|---|
-| Code extracted | ✅ Yes | A valid Python code block was present in the submission. |
-| Function signature | ✅ Yes | The submission defines a function named `parse_duration` with the required signature. |
+| Code extracted | ✅ Yes | A Python code block was found in the submission, containing the implementation. |
+| Function signature | ✅ Yes | The function `parse_duration` is defined with the exact required signature `def parse_duration(s: str) -> int:`. |
 | No banned constructs | ✅ Yes | The code does not contain any use of `eval()` or `exec()`. |
-| Docstring present | ✅ Yes | The `parse_duration` function includes a comprehensive docstring. |
-| All test cases pass | ✅ Yes | The deterministic test harness reports 16/16 test cases passed; all expected outcomes matched. |
+| Docstring present | ✅ Yes | The function includes a comprehensive docstring describing behavior, parameters, return value, and error conditions. |
+| All test cases pass | ✅ Yes | The deterministic test harness reports 16/16 test cases passed; all expected outcomes match the actual results. |
 
-**Summary:** All required criteria are satisfied; the implementation meets the specification and passes all tests.
+**Summary:** All required criteria are satisfied; the submission meets the specification.
 
 ## 5. Usage report
 | Node | Model | Input tokens | Output tokens |
 |---|---|---|---|
-| agent_a_worker | openai/gpt-oss-120b | 374 | 1217 |
-| agent_b_reviewer | openai/gpt-oss-120b | 1862 | 383 |
+| agent_a_worker | openai/gpt-oss-120b | 374 | 1114 |
+| agent_b_reviewer | openai/gpt-oss-120b | 1763 | 363 |
 
 - **Total LLM calls:** 2
-- **Total tokens:** 3836
+- **Total tokens:** 3614
